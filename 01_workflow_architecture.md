@@ -39,9 +39,9 @@ flowchart TD
 - **Mabel →** `approved_ideas.md` (shortlist + reasons + rejections)
 - **Lena →** `scripts.md` (micro-script + alt punchlines + “silent version”)
 - **Rowan →** `scene_plan.md` (beat sheet, character placement, shot list, length targets, storyboarding)
-- **Evan →** `render_prompts/` (image/video prompts, voice script, subtitle text)
+- **Evan →** `render_report.md` + `render_prompts/` (prompt bundle + report)
 - **Quality Gate →** `qc_report.md` (issues, fixes applied, version)
-- **Stephanie →** decision (approve/veto + optional note)
+- **Stephanie →** `curator_decision.md` (approve/veto + optional note)
 - **Parker →** `post_bundle/` (final MP4, caption copy, platform variants)
 
 ## Agent Interaction Contract
@@ -50,13 +50,15 @@ flowchart TD
 - **Rowan** manages *character placement and continuity*.
 - **Evan** has no editorial authority; it executes the plan.
 
-## System States
-- `DRAFT`: in-progress content (may be incomplete / not yet contract-compliant)
-- `RENDERING`: generation running (video, VO, captions)
-- `QC`: technical/taste checks
-- `READY_FOR_CURATOR`: Stephanie review
-- `PUBLISHED`: posted + archived
-- `HOLD`: deferred or rejected
+## System States (Phase 1)
+- `DRAFT`: in-progress artifact generation
+- `RENDERING`: Evan step active
+- `QC`: QC gate active
+- `READY_FOR_CURATOR`: curator decision pending
+- `CURATOR_VETOED`: explicitly rejected
+- `APPROVED`: explicitly approved
+- `POST_BUNDLE_READY`: Parker outputs prepared
+- `STOPPED_QC_FAIL`: QC failed and run stopped
 
 Note: this repo scaffold runs end-to-end in stub mode, validates artifacts against contracts on write, and records provenance in `run_manifest.yaml`.
 
