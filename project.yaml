@@ -32,10 +32,12 @@ artifacts:
   trend_brief: "trend_brief.md"
   ideas: "ideas.md"
   approved_ideas: "approved_ideas.md"
+  scene_brief: "scene_brief.md"
   scripts: "scripts.md"
   scene_plan: "scene_plan.md"
   qc_report: "qc_report.md"
   curator_decision: "curator_decision.md"
+  run_manifest: "run_manifest.yaml"
 
 # Provider selection is intentionally abstract for Phase 1.
 # You will wire one provider client later (Claude SDK / OpenAI Responses / etc.)

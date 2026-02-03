@@ -1,0 +1,73 @@
+# Artifact contracts for The Stephanie Project (v1)
+# Purpose: prevent output drift by requiring stable, parseable headings per artifact.
+# These are intentionally minimal: they check for required sections rather than full parsing.
+
+version: v1
+
+artifacts:
+  trend_brief:
+    description: Trend Scout topic brief
+    required_headings:
+      - "## Trend Brief"
+      - "## Topics"
+
+  ideas:
+    description: Theo idea list
+    required_headings:
+      - "## Ideas"
+
+  approved_ideas:
+    description: Mabel shortlist + rejections
+    required_headings:
+      - "## Approved Shortlist"
+      - "## Rejected"
+
+  scene_brief:
+    description: Rowan scene brief (coordination artifact)
+    required_headings:
+      - "## Title"
+      - "## Characters Present"
+      - "## Dialogue Budget"
+
+  scripts:
+    description: Lena micro-scripts
+    required_any:
+      - "### Script A (spoken)"
+      - "### Dialogue"
+
+  scene_plan:
+    description: Rowan scene plan
+    required_any:
+      - "### Beat Sheet"
+      - "### scene_plan.md"
+
+  render_report:
+    description: Evan render report
+    required_headings:
+      - "## Render Output"
+      - "## Prompt Bundle Summary"
+      - "## QC Self-Check"
+
+  qc_report:
+    description: QC pass/fail report
+    required_headings:
+      - "## QC Result"
+      - "## Findings"
+
+  curator_decision:
+    description: Human curator decision (filled by user)
+    required_headings:
+      - "## Curator Decision"
+
+  run_manifest:
+    description: Run provenance manifest (inputs/outputs/hashes)
+    required_yaml_keys:
+      - "schema_version"
+      - "run.id"
+      - "run.created_at"
+      - "inputs.config.path"
+      - "inputs.config.sha256"
+      - "inputs.contracts.path"
+      - "inputs.contracts.sha256"
+      - "inputs.prompts"
+      - "outputs"

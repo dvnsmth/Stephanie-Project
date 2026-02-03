@@ -25,10 +25,12 @@ This will create:
 - trend_brief.md
 - ideas.md
 - approved_ideas.md
+- scene_brief.md
 - scripts.md
 - scene_plan.md
 - render_prompts/*
 - qc_report.md
+- run_manifest.yaml
 - READY_FOR_CURATOR.md
 
 Then:
