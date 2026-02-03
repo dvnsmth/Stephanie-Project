@@ -45,6 +45,12 @@ def write_yaml(path: Path, data: dict) -> None:
 def now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
 
+def _rel_path(root_dir: Path, path: Path) -> str:
+    try:
+        return str(path.relative_to(root_dir)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
 def load_config(config_path: Path) -> dict:
     return yaml.safe_load(read_text(config_path))
 
@@ -58,6 +64,28 @@ def ensure_run_dir(runs_dir: Path, date: str, slug: str) -> Path:
 def copy_template(src: Path, dst: Path) -> None:
     if not dst.exists():
         shutil.copyfile(src, dst)
+
+def build_policy_manifest(root_dir: Path, policy_cfg: dict | None) -> dict:
+    policy_manifest: dict[str, dict] = {}
+    for key, rel in (policy_cfg or {}).items():
+        if key == "red_lines":
+            continue
+        if not isinstance(rel, str):
+            continue
+        policy_path = (root_dir / rel).resolve() if not Path(rel).is_absolute() else Path(rel)
+        policy_manifest[key] = {
+            "path": _rel_path(root_dir, policy_path),
+            "sha256": sha256_file(policy_path) if policy_path.exists() else None,
+        }
+    return policy_manifest
+
+def set_run_state(manifest: dict, state: str, *, reason: str | None = None) -> None:
+    run = manifest.setdefault("run", {})
+    history = run.setdefault("state_history", [])
+    if run.get("state") == state:
+        return
+    run["state"] = state
+    history.append({"state": state, "at": now_iso(), "reason": reason})
 
 
 def stub_output(agent_name: str, user_payload: str) -> str:
@@ -101,6 +129,9 @@ def stub_output(agent_name: str, user_payload: str) -> str:
             "- **Why it fits (1–2 lines):** Domestic, relatable, kind; no mean edge.\n"
             "- **Risks / watch-outs (1 line max):** Avoid frantic energy.\n"
             "- **Recommended tone note (1 line max):** Calm, understated.\n\n"
+            "## Selection Notes\n"
+            "- **Shortlist rationale (1–2 lines):** Strong domestic fit; minimal risk.\n"
+            "- **Global cautions (1 line):** Keep pacing calm; avoid escalation.\n\n"
             "## Rejected (rest)\n"
             "- **Title:** (stub rejected idea)\n"
             "- **Reason (1 line):** Too performative for the tone rules.\n"
@@ -109,6 +140,9 @@ def stub_output(agent_name: str, user_payload: str) -> str:
     if agent_name == "lena":
         return (
             "## The Lunchbox That Won’t Close\n\n"
+            "### Source Brief\n"
+            "- **Scene brief title:** The Lunchbox That Won’t Close\n"
+            "- **Dialogue budget honored:** yes\n\n"
             "### Dialogue (spoken) — if any\n"
             "- Alex: It’s fine. It’s… a design feature.\n"
             "- Riley: The zipper is crying.\n"
@@ -135,6 +169,8 @@ def stub_output(agent_name: str, user_payload: str) -> str:
                 "# scene_brief.md\n\n"
                 "## Title\n"
                 "The Lunchbox That Won’t Close\n\n"
+                "## Source Idea\n"
+                "The Lunchbox That Won’t Close\n\n"
                 "## Scene Intent\n"
                 "A calm attempt to handle a tiny morning problem without making it a big thing.\n\n"
                 "## Characters Present\n"
@@ -146,6 +182,8 @@ def stub_output(agent_name: str, user_payload: str) -> str:
                 "  - Role in scene: helpful second adult\n"
                 "  - Emotional state entering: warm, lightly amused\n"
                 "  - Integrity bounds: never mean\n\n"
+                "## Selection Notes\n"
+                "Chosen for domestic realism and gentle tension with a clean release.\n\n"
                 "## Tension Pattern\n"
                 "repeated action → interruption\n\n"
                 "## Pressure Source\n"
@@ -167,6 +205,9 @@ def stub_output(agent_name: str, user_payload: str) -> str:
 
         return (
             "## The Lunchbox That Won’t Close\n"
+            "### Source References\n"
+            "- **Scene brief title:** The Lunchbox That Won’t Close\n"
+            "- **Script title:** The Lunchbox That Won’t Close\n\n"
             "### Mode\n"
             "- `sketch`\n\n"
             "### Beat Sheet (3–7 beats)\n"
@@ -211,6 +252,10 @@ def stub_output(agent_name: str, user_payload: str) -> str:
             "- **Runtime:** 25 seconds\n"
             "- **VO:** yes\n"
             "- **Subtitles:** no\n\n"
+            "## Source Inputs\n"
+            "- **scene_plan.md:** The Lunchbox That Won’t Close\n"
+            "- **scripts.md:** The Lunchbox That Won’t Close\n"
+            "- **prompt bundle path:** render_prompts/v1/\n\n"
             "## Prompt Bundle Summary\n"
             "- Shot count: 3\n"
             "- Key continuity locks: kitchen lighting; lunchbox color; wardrobe neutral\n"
@@ -510,7 +555,7 @@ def step_evan(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provi
     write_text(bundle / "shot_01.txt", "(stub) shot prompt goes here\n")
     write_text(bundle / "voice.txt", "(stub) voice prompt goes here\n")
     write_text(bundle / "edit_notes.md", "(stub) edit/assembly notes\n")
-    report_path = run_dir / "render_report.md"
+    report_path = run_dir / cfg['artifacts'].get('render_report', 'render_report.md')
     validate_and_write(contracts=contracts, artifact_key="render_report", out_path=report_path, content=out)
     return report_path
 
@@ -573,14 +618,16 @@ def main():
         prompt_path = (agents_dir / prompt_rel).resolve()
         if prompt_path.exists():
             prompts_manifest[agent_name] = {
-                "path": str(prompt_path.relative_to(root_dir)).replace("\\", "/"),
+                "path": _rel_path(root_dir, prompt_path),
                 "sha256": sha256_file(prompt_path),
             }
         else:
             prompts_manifest[agent_name] = {
-                "path": str(prompt_path).replace("\\", "/"),
+                "path": _rel_path(root_dir, prompt_path),
                 "sha256": None,
             }
+
+    policy_manifest = build_policy_manifest(root_dir, cfg.get("policy", {}))
 
     # Ensure taste profile exists
     taste_path = root_dir / cfg['policy']['stephanie_taste_profile']
@@ -602,14 +649,15 @@ def main():
             },
             "inputs": {
                 "config": {
-                    "path": str(cfg_abs.relative_to(root_dir)).replace("\\", "/") if cfg_abs.exists() else str(cfg_abs),
+                    "path": _rel_path(root_dir, cfg_abs),
                     "sha256": sha256_file(cfg_abs) if cfg_abs.exists() else None,
                 },
                 "contracts": {
-                    "path": str(contracts_abs.relative_to(root_dir)).replace("\\", "/"),
+                    "path": _rel_path(root_dir, contracts_abs),
                     "sha256": sha256_file(contracts_abs),
                 },
                 "prompts": prompts_manifest,
+                "policy": policy_manifest,
                 "provider": cfg.get("providers", {}).get("default", {}),
                 "routing": {
                     agent: {
@@ -639,6 +687,9 @@ def main():
                         "provider", cfg.get("providers", {}).get("default", {})
                     )
                     existing.setdefault("inputs", {}).setdefault(
+                        "policy", policy_manifest
+                    )
+                    existing.setdefault("inputs", {}).setdefault(
                         "routing",
                         {
                             agent: {
@@ -653,6 +704,8 @@ def main():
             except Exception:
                 pass
 
+        set_run_state(manifest, "READY_FOR_CURATOR", reason="resume")
+
         curator_path = run_dir / cfg['artifacts']['curator_decision']
         if not curator_path.exists():
             raise FileNotFoundError(f"Missing curator_decision.md in {run_dir}")
@@ -660,11 +713,14 @@ def main():
         curator_decision = parse_curator_approval(curator_text)
         record_gate(manifest, "curator", curator_decision.status, source=curator_path.name)
         if curator_decision.status != "APPROVED":
+            set_run_state(manifest, "CURATOR_VETOED", reason="curator_decision")
             print("Curator vetoed / not approved. Stopping.")
             write_yaml(manifest_path, manifest)
             return
+        set_run_state(manifest, "APPROVED", reason="curator_decision")
         parker_out = step_parker(cfg, run_dir, agents_dir, curator_path, provider, manifest)
         upsert_output_manifest(manifest, "post_bundle", parker_out)
+        set_run_state(manifest, "POST_BUNDLE_READY", reason="parker_complete")
         write_yaml(manifest_path, manifest)
         print(f"Parker created post bundle: {parker_out}")
         return
@@ -684,14 +740,15 @@ def main():
         },
         "inputs": {
             "config": {
-                "path": str(cfg_abs.relative_to(root_dir)).replace("\\", "/") if cfg_abs.exists() else str(cfg_abs),
+                "path": _rel_path(root_dir, cfg_abs),
                 "sha256": sha256_file(cfg_abs) if cfg_abs.exists() else None,
             },
             "contracts": {
-                "path": str(contracts_abs.relative_to(root_dir)).replace("\\", "/"),
+                "path": _rel_path(root_dir, contracts_abs),
                 "sha256": sha256_file(contracts_abs),
             },
             "prompts": prompts_manifest,
+            "policy": policy_manifest,
             "provider": cfg.get("providers", {}).get("default", {}),
             "routing": {
                 agent: {
@@ -709,6 +766,8 @@ def main():
     if manifest["inputs"]["config"]["sha256"] is None:
         # Best-effort fallback: compute hash from loaded config dict.
         manifest["inputs"]["config"]["sha256"] = sha256_text(yaml.safe_dump(cfg, sort_keys=False))
+
+    set_run_state(manifest, "DRAFT", reason="start")
 
     # Write an initial manifest immediately for provenance, even if the run later fails.
     write_yaml(manifest_path, manifest)
@@ -737,8 +796,12 @@ def main():
     scene = step_rowan_scene_plan(cfg, run_dir, agents_dir, contracts, provider, manifest, scene_brief, scripts)
     upsert_output_manifest(manifest, "scene_plan", scene)
     write_yaml(manifest_path, manifest)
+    set_run_state(manifest, "RENDERING", reason="evan_start")
+    write_yaml(manifest_path, manifest)
     render_report = step_evan(cfg, run_dir, agents_dir, contracts, provider, manifest, scene, scripts)
     upsert_output_manifest(manifest, "render_report", render_report)
+    write_yaml(manifest_path, manifest)
+    set_run_state(manifest, "QC", reason="qc_start")
     write_yaml(manifest_path, manifest)
     qc_report = step_qc(cfg, run_dir, agents_dir, contracts, provider, manifest, render_report)
     upsert_output_manifest(manifest, "qc_report", qc_report)
@@ -750,6 +813,7 @@ def main():
     write_yaml(manifest_path, manifest)
 
     if qc_decision.status == "FAIL" and cfg.get("run_defaults", {}).get("stop_on_qc_fail", True):
+        set_run_state(manifest, "STOPPED_QC_FAIL", reason="qc_fail")
         write_text(
             run_dir / "STOPPED_QC_FAIL.md",
             (
@@ -762,6 +826,7 @@ def main():
         print("QC failed; stopping before curator review.")
         return
 
+    set_run_state(manifest, "READY_FOR_CURATOR", reason="qc_pass")
     mark_ready_for_curator(run_dir)
 
     # Validate the manifest itself against contract.

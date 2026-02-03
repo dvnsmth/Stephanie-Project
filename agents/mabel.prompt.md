@@ -26,6 +26,10 @@ For each:
 - **Risks / watch-outs (1 line max):**
 - **Recommended tone note (1 line max):**
 
+## Selection Notes
+- **Shortlist rationale (1–2 lines):** (What made these the best fit today)
+- **Global cautions (1 line):** (Any shared risk to watch in downstream steps)
+
 ## Rejected (rest)
 For each:
 - **Title:**

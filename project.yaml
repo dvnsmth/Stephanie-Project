@@ -35,6 +35,7 @@ artifacts:
   scene_brief: "scene_brief.md"
   scripts: "scripts.md"
   scene_plan: "scene_plan.md"
+  render_report: "render_report.md"
   qc_report: "qc_report.md"
   curator_decision: "curator_decision.md"
   run_manifest: "run_manifest.yaml"
@@ -95,6 +96,7 @@ policy:
   stephanie_taste_profile: "design/stephanie_taste_profile.md"
   trend_usage_rules: "06_trend_rules.md"
   character_bible: "03_character_bible.md"
+  scope_boundaries: "09_scope_boundaries.md"
 
   # High-level red lines. Keep short; enforce in Mabel + QC.
   red_lines:
