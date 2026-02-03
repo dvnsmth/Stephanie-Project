@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Outputs
+runs/**
+!runs/.keep
+
+# OS
+.DS_Store

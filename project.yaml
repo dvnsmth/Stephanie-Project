@@ -1,0 +1,88 @@
+# project.yaml — The Stephanie Project (v1)
+# Minimal configuration for the orchestrator controller.
+
+project:
+  name: "The Stephanie Project"
+  version: "v1"
+  timezone: "America/Phoenix"
+
+run_defaults:
+  # Pipeline behavior
+  batch_size_ideas: 20
+  shortlist_size: 8
+  max_scripts: 5        # how many shortlisted ideas to script in a run
+  max_scene_plans: 3    # how many to convert into scene plans
+  stop_on_qc_fail: true
+
+  # Render defaults (Evan)
+  aspect_ratio: "9:16"
+  resolution: "1080x1920"
+  target_seconds: 25
+  fps: 30
+  subtitles_default: false
+  voice_default: true
+
+paths:
+  design_dir: "design"
+  agents_dir: "agents"
+  runs_dir: "runs"
+  templates_dir: "templates"
+
+artifacts:
+  trend_brief: "trend_brief.md"
+  ideas: "ideas.md"
+  approved_ideas: "approved_ideas.md"
+  scripts: "scripts.md"
+  scene_plan: "scene_plan.md"
+  qc_report: "qc_report.md"
+  curator_decision: "curator_decision.md"
+
+# Provider selection is intentionally abstract for Phase 1.
+# You will wire one provider client later (Claude SDK / OpenAI Responses / etc.)
+providers:
+  default:
+    name: "stub"
+    model: "stub-model"
+    # api_key_env: "YOUR_API_KEY_ENV_VAR"
+
+# Map each agent to a provider+model (can all be same initially).
+agent_routing:
+  trend_scout:
+    provider: "default"
+    prompt_file: "trend_scout.prompt.md"
+  theo:
+    provider: "default"
+    prompt_file: "theo.prompt.md"
+  mabel:
+    provider: "default"
+    prompt_file: "mabel.prompt.md"
+  lena:
+    provider: "default"
+    prompt_file: "lena.prompt.md"
+  rowan:
+    provider: "default"
+    prompt_file: "rowan.prompt.md"
+  evan:
+    provider: "default"
+    prompt_file: "evan.prompt.md"
+  qc:
+    provider: "default"
+    prompt_file: "qc.prompt.md"
+  parker:
+    provider: "default"
+    prompt_file: "parker.prompt.md"
+
+policy:
+  # Pointers to supporting docs (keep these files in design/)
+  stephanie_taste_profile: "design/stephanie_taste_profile.md"
+  trend_usage_rules: "design/06_supporting.md"
+  character_bible: "design/03_character_bible.md"
+
+  # High-level red lines. Keep short; enforce in Mabel + QC.
+  red_lines:
+    - "cruelty or humiliation as the punchline"
+    - "punching down"
+    - "explicit sexual content"
+    - "depictions of real persons without consent"
+    - "political persuasion or propaganda"
+
