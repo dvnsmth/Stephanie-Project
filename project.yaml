@@ -77,8 +77,8 @@ agent_routing:
 policy:
   # Pointers to supporting docs (keep these files in design/)
   stephanie_taste_profile: "design/stephanie_taste_profile.md"
-  trend_usage_rules: "design/06_supporting.md"
-  character_bible: "design/03_character_bible.md"
+  trend_usage_rules: "06_trend_rules.md"
+  character_bible: "03_character_bible.md"
 
   # High-level red lines. Keep short; enforce in Mabel + QC.
   red_lines:
