@@ -10,10 +10,21 @@ without calling any external LLM APIs yet.
 - Agent prompt files under `agents/`
 - Design docs under `design/`
 
+## Canonical docs
+- Execution contract (artifacts/gates/state): `docs/MECHANICS.md`
+- Creative constraints (taste/scope/trends): `docs/POLICY.md`
+
+## Status (planning hardening)
+- Artifact contracts + validator: complete
+- `scene_brief` → `scripts` → `scene_plan` workflow: complete
+- Run provenance (`run_manifest.yaml`): complete
+- Gate semantics (QC + curator resume): complete
+- Policy vs mechanics doc split: complete
+- Provider integration contract + abstraction: complete
+
 ## Next step to make it real
-Implement one provider client:
-- Claude Agent SDK OR OpenAI Responses API
-then replace the stub `call_llm()` function.
+Implement one provider client (Claude SDK, OpenAI Responses, etc.) following `docs/PROVIDER_CONTRACT.md`,
+then replace `StubProvider` in `scripts/provider.py` (or introduce a real Provider implementation and use it in `scripts/run_pipeline.py`).
 
 ## Quickstart
 ```bash

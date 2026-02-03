@@ -38,6 +38,11 @@ def validate_artifact(contracts: dict[str, Any], artifact_key: str, content: str
         if heading not in content:
             return ContractResult(ok=False, message=f"Missing required heading: {heading}")
 
+    required_markers = contract.get("required_markers") or []
+    for marker in required_markers:
+        if marker not in content:
+            return ContractResult(ok=False, message=f"Missing required marker: {marker}")
+
     required_any = contract.get("required_any") or []
     if required_any:
         if not any(marker in content for marker in required_any):

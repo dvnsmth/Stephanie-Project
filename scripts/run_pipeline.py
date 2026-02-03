@@ -8,6 +8,7 @@ Replace `call_llm()` with your chosen provider client (Claude SDK / OpenAI Respo
 import argparse
 import datetime as dt
 import os
+import time
 from pathlib import Path
 import yaml
 import shutil
@@ -16,10 +17,14 @@ try:
     # When executed as a module: python -m scripts.run_pipeline
     from scripts.artifact_contracts import load_contracts, validate_artifact
     from scripts.provenance import sha256_file, sha256_text
+    from scripts.gates import parse_curator_approval, parse_qc_status
+    from scripts.provider import Provider, StubProvider, resolve_provider_config
 except ImportError:
     # When executed as a script: python scripts/run_pipeline.py
     from artifact_contracts import load_contracts, validate_artifact
     from provenance import sha256_file, sha256_text
+    from gates import parse_curator_approval, parse_qc_status
+    from provider import Provider, StubProvider, resolve_provider_config
 
 # ---------------------------
 # Utilities
@@ -256,24 +261,84 @@ def stub_output(agent_name: str, user_payload: str) -> str:
 # STUB LLM call (replace later)
 # ---------------------------
 
-def call_llm(agent_name: str, system_prompt: str, user_payload: str) -> str:
-    """Stub implementation.
+def _resolve_agent_provider_cfg(cfg: dict, agent_name: str):
+    route = (cfg.get("agent_routing") or {}).get(agent_name, {})
+    provider_ref = route.get("provider") or "default"
+    provider_raw = (cfg.get("providers") or {}).get(provider_ref, {})
+    model_override = route.get("model")
+    return provider_ref, resolve_provider_config(provider_raw, model_override=model_override)
 
-    Replace with:
-      - Claude Agent SDK client call, or
-      - OpenAI Responses API call, etc.
 
-    The contract: return the agent's markdown output.
-    """
-    header = f"# STUB OUTPUT — {agent_name}\nGenerated at: {now_iso()}\n\n"
-    meta = (
-        "(Replace this stub with a real provider call.)\n\n"
-        "## Inputs Received\n"
-        f"- Prompt length: {len(system_prompt)}\n"
-        f"- Payload length: {len(user_payload)}\n\n"
-        "---\n\n"
+def _record_llm_call_event(
+    manifest: dict,
+    *,
+    agent_name: str,
+    provider_name: str,
+    model: str,
+    system_prompt: str,
+    user_payload: str,
+    started_at: str,
+    finished_at: str,
+    latency_ms: int,
+    request_id: str | None,
+    usage: dict | None,
+) -> None:
+    manifest.setdefault("events", []).append(
+        {
+            "type": "llm_call",
+            "agent": agent_name,
+            "provider": {"name": provider_name, "model": model},
+            "prompt_sha256": sha256_text(system_prompt),
+            "payload_sha256": sha256_text(user_payload),
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "latency_ms": latency_ms,
+            "request_id": request_id,
+            "usage": usage,
+        }
     )
-    return header + meta + stub_output(agent_name, user_payload)
+
+
+def call_llm(
+    *,
+    cfg: dict,
+    provider: Provider,
+    agent_name: str,
+    system_prompt: str,
+    user_payload: str,
+    manifest: dict | None = None,
+) -> str:
+    """Provider-agnostic call.
+
+    In Phase 1 this uses StubProvider, but the interface is the same for real providers.
+    """
+    _, provider_cfg = _resolve_agent_provider_cfg(cfg, agent_name)
+    started_at = now_iso()
+    t0 = time.perf_counter()
+    result = provider.generate(
+        agent_name=agent_name,
+        system_prompt=system_prompt,
+        user_payload=user_payload,
+        config=provider_cfg,
+    )
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    finished_at = now_iso()
+
+    if manifest is not None:
+        _record_llm_call_event(
+            manifest,
+            agent_name=agent_name,
+            provider_name=result.provider_name,
+            model=result.model,
+            system_prompt=system_prompt,
+            user_payload=user_payload,
+            started_at=started_at,
+            finished_at=finished_at,
+            latency_ms=latency_ms,
+            request_id=getattr(result, "request_id", None),
+            usage=getattr(result, "usage", None),
+        )
+    return result.text
 
 
 def validate_and_write(
@@ -315,6 +380,14 @@ def upsert_output_manifest(manifest: dict, artifact_key: str, out_path: Path) ->
         "updated_at": now_iso(),
     }
 
+
+def record_gate(manifest: dict, gate_name: str, decision: str, *, source: str | None = None) -> None:
+    manifest.setdefault("gates", {})[gate_name] = {
+        "decision": decision,
+        "at": now_iso(),
+        "source": source,
+    }
+
 # ---------------------------
 # Pipeline steps
 # ---------------------------
@@ -325,27 +398,27 @@ def load_agent_prompt(agents_dir: Path, prompt_file: str) -> str:
         raise FileNotFoundError(f"Missing agent prompt file: {p}")
     return read_text(p)
 
-def step_trend_scout(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict) -> Path:
+def step_trend_scout(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['trend_scout']['prompt_file'])
     payload = "Window: last 72 hours\nRegion: US\n"
-    out = call_llm("trend_scout", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="trend_scout", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['trend_brief']
     validate_and_write(contracts=contracts, artifact_key="trend_brief", out_path=out_path, content=out)
     return out_path
 
-def step_theo(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, trend_brief_path: Path) -> Path:
+def step_theo(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict, trend_brief_path: Path) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['theo']['prompt_file'])
     payload = (
         f"Batch size: {cfg['run_defaults']['batch_size_ideas']}\n\n"
         "--- trend_brief.md ---\n"
         f"{read_text(trend_brief_path)}\n"
     )
-    out = call_llm("theo", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="theo", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['ideas']
     validate_and_write(contracts=contracts, artifact_key="ideas", out_path=out_path, content=out)
     return out_path
 
-def step_mabel(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, ideas_path: Path) -> Path:
+def step_mabel(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict, ideas_path: Path) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['mabel']['prompt_file'])
     taste_path = Path(cfg['policy']['stephanie_taste_profile'])
     payload = (
@@ -354,12 +427,12 @@ def step_mabel(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, idea
         "--- ideas.md ---\n"
         f"{read_text(ideas_path)}\n"
     )
-    out = call_llm("mabel", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="mabel", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['approved_ideas']
     validate_and_write(contracts=contracts, artifact_key="approved_ideas", out_path=out_path, content=out)
     return out_path
 
-def step_rowan_scene_brief(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, approved_ideas_path: Path) -> Path:
+def step_rowan_scene_brief(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict, approved_ideas_path: Path) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['rowan']['prompt_file'])
     character_bible = Path(cfg['policy']['character_bible'])
     payload = (
@@ -370,13 +443,13 @@ def step_rowan_scene_brief(cfg: dict, run_dir: Path, agents_dir: Path, contracts
         "--- approved_ideas.md ---\n"
         f"{read_text(approved_ideas_path)}\n"
     )
-    out = call_llm("rowan", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="rowan", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['scene_brief']
     validate_and_write(contracts=contracts, artifact_key="scene_brief", out_path=out_path, content=out)
     return out_path
 
 
-def step_lena(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, scene_brief_path: Path) -> Path:
+def step_lena(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict, scene_brief_path: Path) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['lena']['prompt_file'])
     character_bible = Path(cfg['policy']['character_bible'])
     payload = (
@@ -386,7 +459,7 @@ def step_lena(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, scene
         "--- scene_brief.md ---\n"
         f"{read_text(scene_brief_path)}\n"
     )
-    out = call_llm("lena", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="lena", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['scripts']
     validate_and_write(contracts=contracts, artifact_key="scripts", out_path=out_path, content=out)
     return out_path
@@ -396,6 +469,8 @@ def step_rowan_scene_plan(
     run_dir: Path,
     agents_dir: Path,
     contracts: dict,
+    provider: Provider,
+    manifest: dict,
     scene_brief_path: Path,
     scripts_path: Path,
 ) -> Path:
@@ -410,12 +485,12 @@ def step_rowan_scene_plan(
         "--- scripts.md ---\n"
         f"{read_text(scripts_path)}\n"
     )
-    out = call_llm("rowan", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="rowan", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['scene_plan']
     validate_and_write(contracts=contracts, artifact_key="scene_plan", out_path=out_path, content=out)
     return out_path
 
-def step_evan(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, scene_plan_path: Path, scripts_path: Path) -> Path:
+def step_evan(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict, scene_plan_path: Path, scripts_path: Path) -> Path:
     """Evan produces render prompt bundles + report (stubbed)."""
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['evan']['prompt_file'])
     payload = (
@@ -427,7 +502,7 @@ def step_evan(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, scene
         "--- scripts.md ---\n"
         f"{read_text(scripts_path)}\n"
     )
-    out = call_llm("evan", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="evan", system_prompt=prompt, user_payload=payload, manifest=manifest)
 
     # Create prompt bundle folder
     bundle = run_dir / "render_prompts" / "v1"
@@ -439,13 +514,13 @@ def step_evan(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, scene
     validate_and_write(contracts=contracts, artifact_key="render_report", out_path=report_path, content=out)
     return report_path
 
-def step_qc(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, render_report_path: Path) -> Path:
+def step_qc(cfg: dict, run_dir: Path, agents_dir: Path, contracts: dict, provider: Provider, manifest: dict, render_report_path: Path) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['qc']['prompt_file'])
     payload = (
         "--- render_report.md ---\n"
         f"{read_text(render_report_path)}\n"
     )
-    out = call_llm("qc", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="qc", system_prompt=prompt, user_payload=payload, manifest=manifest)
     out_path = run_dir / cfg['artifacts']['qc_report']
     validate_and_write(contracts=contracts, artifact_key="qc_report", out_path=out_path, content=out)
     return out_path
@@ -454,10 +529,10 @@ def mark_ready_for_curator(run_dir: Path) -> None:
     write_text(run_dir / "READY_FOR_CURATOR.md",
                "# READY_FOR_CURATOR\n\nAll artifacts generated. Add curator_decision.md to proceed.\n")
 
-def step_parker(cfg: dict, run_dir: Path, agents_dir: Path, curator_decision_path: Path) -> Path:
+def step_parker(cfg: dict, run_dir: Path, agents_dir: Path, curator_decision_path: Path, provider: Provider, manifest: dict) -> Path:
     prompt = load_agent_prompt(agents_dir, cfg['agent_routing']['parker']['prompt_file'])
     payload = read_text(curator_decision_path)
-    out = call_llm("parker", prompt, payload)
+    out = call_llm(cfg=cfg, provider=provider, agent_name="parker", system_prompt=prompt, user_payload=payload, manifest=manifest)
 
     post_bundle = run_dir / "post_bundle"
     post_bundle.mkdir(parents=True, exist_ok=True)
@@ -517,6 +592,7 @@ def main():
     if args.resume:
         run_dir = Path(args.resume)
         manifest_path = run_dir / cfg['artifacts'].get('run_manifest', 'run_manifest.yaml')
+        provider = StubProvider(stub_output)
         manifest = {
             "schema_version": "v1",
             "run": {
@@ -535,6 +611,14 @@ def main():
                 },
                 "prompts": prompts_manifest,
                 "provider": cfg.get("providers", {}).get("default", {}),
+                "routing": {
+                    agent: {
+                        "provider": (route or {}).get("provider"),
+                        "model": (route or {}).get("model"),
+                        "prompt_file": (route or {}).get("prompt_file"),
+                    }
+                    for agent, route in (cfg.get("agent_routing", {}) or {}).items()
+                },
             },
             "outputs": {},
             "events": [
@@ -551,6 +635,20 @@ def main():
                 existing = yaml.safe_load(read_text(manifest_path))
                 if isinstance(existing, dict):
                     existing.setdefault("events", []).append({"type": "resume", "at": now_iso()})
+                    existing.setdefault("inputs", {}).setdefault(
+                        "provider", cfg.get("providers", {}).get("default", {})
+                    )
+                    existing.setdefault("inputs", {}).setdefault(
+                        "routing",
+                        {
+                            agent: {
+                                "provider": (route or {}).get("provider"),
+                                "model": (route or {}).get("model"),
+                                "prompt_file": (route or {}).get("prompt_file"),
+                            }
+                            for agent, route in (cfg.get("agent_routing", {}) or {}).items()
+                        },
+                    )
                     manifest = existing
             except Exception:
                 pass
@@ -558,14 +656,14 @@ def main():
         curator_path = run_dir / cfg['artifacts']['curator_decision']
         if not curator_path.exists():
             raise FileNotFoundError(f"Missing curator_decision.md in {run_dir}")
-        # Parse simple approval flag
-        content = read_text(curator_path).lower()
-        approved = "approved: yes" in content
-        if not approved:
-            print("Curator vetoed or not approved. Stopping.")
+        curator_text = read_text(curator_path)
+        curator_decision = parse_curator_approval(curator_text)
+        record_gate(manifest, "curator", curator_decision.status, source=curator_path.name)
+        if curator_decision.status != "APPROVED":
+            print("Curator vetoed / not approved. Stopping.")
             write_yaml(manifest_path, manifest)
             return
-        parker_out = step_parker(cfg, run_dir, agents_dir, curator_path)
+        parker_out = step_parker(cfg, run_dir, agents_dir, curator_path, provider, manifest)
         upsert_output_manifest(manifest, "post_bundle", parker_out)
         write_yaml(manifest_path, manifest)
         print(f"Parker created post bundle: {parker_out}")
@@ -595,6 +693,14 @@ def main():
             },
             "prompts": prompts_manifest,
             "provider": cfg.get("providers", {}).get("default", {}),
+            "routing": {
+                agent: {
+                    "provider": (route or {}).get("provider"),
+                    "model": (route or {}).get("model"),
+                    "prompt_file": (route or {}).get("prompt_file"),
+                }
+                for agent, route in (cfg.get("agent_routing", {}) or {}).items()
+            },
         },
         "outputs": {},
         "events": [{"type": "start", "at": now_iso()}],
@@ -610,31 +716,51 @@ def main():
     # Ensure curator template is available for user later
     copy_template(templates_dir / "curator_decision.template.md", run_dir / "curator_decision.md")
 
+    provider = StubProvider(stub_output)
+
     # Run pipeline
-    trend = step_trend_scout(cfg, run_dir, agents_dir, contracts)
+    trend = step_trend_scout(cfg, run_dir, agents_dir, contracts, provider, manifest)
     upsert_output_manifest(manifest, "trend_brief", trend)
     write_yaml(manifest_path, manifest)
-    ideas = step_theo(cfg, run_dir, agents_dir, contracts, trend)
+    ideas = step_theo(cfg, run_dir, agents_dir, contracts, provider, manifest, trend)
     upsert_output_manifest(manifest, "ideas", ideas)
     write_yaml(manifest_path, manifest)
-    approved = step_mabel(cfg, run_dir, agents_dir, contracts, ideas)
+    approved = step_mabel(cfg, run_dir, agents_dir, contracts, provider, manifest, ideas)
     upsert_output_manifest(manifest, "approved_ideas", approved)
     write_yaml(manifest_path, manifest)
-    scene_brief = step_rowan_scene_brief(cfg, run_dir, agents_dir, contracts, approved)
+    scene_brief = step_rowan_scene_brief(cfg, run_dir, agents_dir, contracts, provider, manifest, approved)
     upsert_output_manifest(manifest, "scene_brief", scene_brief)
     write_yaml(manifest_path, manifest)
-    scripts = step_lena(cfg, run_dir, agents_dir, contracts, scene_brief)
+    scripts = step_lena(cfg, run_dir, agents_dir, contracts, provider, manifest, scene_brief)
     upsert_output_manifest(manifest, "scripts", scripts)
     write_yaml(manifest_path, manifest)
-    scene = step_rowan_scene_plan(cfg, run_dir, agents_dir, contracts, scene_brief, scripts)
+    scene = step_rowan_scene_plan(cfg, run_dir, agents_dir, contracts, provider, manifest, scene_brief, scripts)
     upsert_output_manifest(manifest, "scene_plan", scene)
     write_yaml(manifest_path, manifest)
-    render_report = step_evan(cfg, run_dir, agents_dir, contracts, scene, scripts)
+    render_report = step_evan(cfg, run_dir, agents_dir, contracts, provider, manifest, scene, scripts)
     upsert_output_manifest(manifest, "render_report", render_report)
     write_yaml(manifest_path, manifest)
-    qc_report = step_qc(cfg, run_dir, agents_dir, contracts, render_report)
+    qc_report = step_qc(cfg, run_dir, agents_dir, contracts, provider, manifest, render_report)
     upsert_output_manifest(manifest, "qc_report", qc_report)
     write_yaml(manifest_path, manifest)
+
+    qc_text = read_text(qc_report)
+    qc_decision = parse_qc_status(qc_text)
+    record_gate(manifest, "qc", qc_decision.status, source=qc_report.name)
+    write_yaml(manifest_path, manifest)
+
+    if qc_decision.status == "FAIL" and cfg.get("run_defaults", {}).get("stop_on_qc_fail", True):
+        write_text(
+            run_dir / "STOPPED_QC_FAIL.md",
+            (
+                "# STOPPED_QC_FAIL\n\n"
+                "QC reported FAIL and stop_on_qc_fail=true.\n"
+            ),
+        )
+        manifest.setdefault("events", []).append({"type": "stopped", "at": now_iso(), "reason": "qc_fail"})
+        write_yaml(manifest_path, manifest)
+        print("QC failed; stopping before curator review.")
+        return
 
     mark_ready_for_curator(run_dir)
 

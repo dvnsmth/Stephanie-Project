@@ -1,4 +1,7 @@
-# 08_scope_boundaries.md — Project Scope Guardrails (v1)
+# 09_scope_boundaries.md — Project Scope Guardrails (v1)
+
+> **Doc type:** POLICY
+> Canonical: `docs/POLICY.md` (taste/scope/trends) • `docs/MECHANICS.md` (artifacts/gates/state)
 
 ## Purpose
 This document defines **what The Stephanie Project will NOT do** in v1.  

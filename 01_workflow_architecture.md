@@ -1,5 +1,12 @@
 # The Stephanie Project — Workflow & Architecture (v1)
 
+> **Doc type:** MIXED (overview)
+> Canonical: `docs/MECHANICS.md` (artifacts/gates/state) • `docs/POLICY.md` (taste/scope/trends)
+
+This doc is a mixed overview. For canonical references:
+- Mechanics (artifacts/gates/run state): `docs/MECHANICS.md`
+- Policy (taste/scope/trend constraints): `docs/POLICY.md`
+
 ## Purpose
 Create **AI-generated** short-form, clean comedy content that **Stephanie approves** and the family household can enjoy together.
 
@@ -44,12 +51,14 @@ flowchart TD
 - **Evan** has no editorial authority; it executes the plan.
 
 ## System States
-- `DRAFT`: ideas/scripts/plans in progress
+- `DRAFT`: in-progress content (may be incomplete / not yet contract-compliant)
 - `RENDERING`: generation running (video, VO, captions)
 - `QC`: technical/taste checks
 - `READY_FOR_CURATOR`: Stephanie review
 - `PUBLISHED`: posted + archived
 - `HOLD`: deferred or rejected
+
+Note: this repo scaffold runs end-to-end in stub mode, validates artifacts against contracts on write, and records provenance in `run_manifest.yaml`.
 
 ## Tooling & Orchestration Options (2026 snapshot)
 You asked “Claude SDK or something else?” Here are common choices for multi-agent orchestration:

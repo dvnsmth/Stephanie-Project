@@ -53,11 +53,15 @@ artifacts:
     required_headings:
       - "## QC Result"
       - "## Findings"
+    required_markers:
+      - "**Status:**"
 
   curator_decision:
     description: Human curator decision (filled by user)
     required_headings:
       - "## Curator Decision"
+    required_markers:
+      - "Approved:"
 
   run_manifest:
     description: Run provenance manifest (inputs/outputs/hashes)
@@ -70,4 +74,7 @@ artifacts:
       - "inputs.contracts.path"
       - "inputs.contracts.sha256"
       - "inputs.prompts"
+      - "inputs.provider.name"
+      - "inputs.provider.model"
+      - "inputs.routing"
       - "outputs"

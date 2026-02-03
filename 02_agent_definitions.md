@@ -1,5 +1,8 @@
 # Agent Definitions, Scope, and Constraints (v1)
 
+> **Doc type:** MECHANICS
+> Canonical: `docs/MECHANICS.md` (artifacts/gates/state) • `docs/POLICY.md` (taste/scope/trends)
+
 This file defines the agents used in *The Stephanie Project*.
 
 ## Common constraints for all agents

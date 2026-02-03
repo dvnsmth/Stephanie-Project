@@ -1,6 +1,9 @@
 # 08_agent_creation_platforms.md
 # Agent Creation & Orchestration Platforms (v1)
 
+> **Doc type:** MECHANICS
+> Canonical: `docs/MECHANICS.md` (artifacts/gates/state) • `docs/POLICY.md` (taste/scope/trends)
+
 ## Goal
 Select a platform to run multi-agent workflows with tool access, state, and reproducibility.
 

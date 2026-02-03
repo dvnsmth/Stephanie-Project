@@ -1,5 +1,12 @@
 # AI-Only Production Playbook (Render Pipeline) (v1)
 
+> **Doc type:** MECHANICS
+> Canonical: `docs/MECHANICS.md` (artifacts/gates/state) • `docs/POLICY.md` (taste/scope/trends)
+
+Canonical references:
+- Mechanics (artifacts/gates/run state): `docs/MECHANICS.md`
+- Policy (taste/scope/trend constraints): `docs/POLICY.md`
+
 This playbook replaces human filming/acting with AI generation.
 
 ## Output Targets

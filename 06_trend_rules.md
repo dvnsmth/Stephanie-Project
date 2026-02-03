@@ -1,6 +1,9 @@
 # 06_trend_usage_rules.md
 # Trend Usage Firewall (v1)
 
+> **Doc type:** POLICY
+> Canonical: `docs/POLICY.md` (taste/scope/trends) • `docs/MECHANICS.md` (artifacts/gates/state)
+
 ## Core Rule
 > **Topics may inform ideas. Trends may not define them.**
 

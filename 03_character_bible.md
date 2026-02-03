@@ -1,5 +1,8 @@
 # Character Bible (Minimal, Vignette-Capable) (v1)
 
+> **Doc type:** POLICY
+> Canonical: `docs/POLICY.md` (taste/scope/trends) • `docs/MECHANICS.md` (artifacts/gates/state)
+
 **Goal:** Maintain consistent characters for sketch comedy, while preserving optional future vignette continuity.
 
 ## Rules

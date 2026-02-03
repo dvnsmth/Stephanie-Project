@@ -1,5 +1,8 @@
 # scene_brief.md
 
+> **Doc type:** MECHANICS
+> Canonical: `docs/MECHANICS.md` (artifacts/gates/state) • `docs/POLICY.md` (taste/scope/trends)
+
 ## Title
 {Working title}
 

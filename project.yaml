@@ -45,34 +45,50 @@ providers:
   default:
     name: "stub"
     model: "stub-model"
+    # Optional params (used by real providers later)
     # api_key_env: "YOUR_API_KEY_ENV_VAR"
+    # base_url: "https://..."
+    # temperature: 0.7
+    # top_p: 1.0
+    # max_output_tokens: 1200
+    # seed: 0
+    # timeout_seconds: 60
+    # max_retries: 2
 
 # Map each agent to a provider+model (can all be same initially).
 agent_routing:
   trend_scout:
     provider: "default"
     prompt_file: "trend_scout.prompt.md"
+    # model: "override-model"   # optional per-agent override
   theo:
     provider: "default"
     prompt_file: "theo.prompt.md"
+    # model: "override-model"
   mabel:
     provider: "default"
     prompt_file: "mabel.prompt.md"
+    # model: "override-model"
   lena:
     provider: "default"
     prompt_file: "lena.prompt.md"
+    # model: "override-model"
   rowan:
     provider: "default"
     prompt_file: "rowan.prompt.md"
+    # model: "override-model"
   evan:
     provider: "default"
     prompt_file: "evan.prompt.md"
+    # model: "override-model"
   qc:
     provider: "default"
     prompt_file: "qc.prompt.md"
+    # model: "override-model"
   parker:
     provider: "default"
     prompt_file: "parker.prompt.md"
+    # model: "override-model"
 
 policy:
   # Pointers to supporting docs (keep these files in design/)
