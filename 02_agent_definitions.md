@@ -13,6 +13,12 @@ This file defines the agents used in *The Stephanie Project*.
 - Agents may collaborate only via declared artifacts (e.g., `scene_brief.md`).
 - No agent may assume knowledge of another agent’s intent beyond artifacts.
 
+## Authority Boundaries (Summary)
+- **Taste authority:** Mabel (proxy) + Stephanie (final).
+- **Craft authority:** Theo (ideas), Lena (dialogue), Rowan (scene structure), Evan (render).
+- **QC authority:** compliance + technical only; no creative rewrites.
+- If upstream intent must change, request a new artifact; do not patch downstream outputs.
+
 ---
 
 ## Theo — Idea Sprinkler
@@ -87,6 +93,7 @@ Per idea:
 **Forbidden**
 - Scene blocking, shot lists, camera or edit decisions
 - Exposition, recaps, “last time on…”
+- Changing the brief’s scene intent or tension pattern
 
 **Quality bar**
 - Natural, speakable language
@@ -113,6 +120,7 @@ Per idea:
 - Writing dialogue
 - Inventing story arcs
 - Forcing character reactions for comedy
+- Rewriting or reinterpreting Lena’s dialogue; if the brief must change, request a new script
 
 **Quality bar**
 - Plausible staging
@@ -171,5 +179,8 @@ Per idea:
 - Visual artifacts, uncanny faces, text errors
 - Tone drift (mean/performative)
 - Runtime within spec
+
+**Boundary**
+- QC may fail for policy or technical violations, not for subjective humor preference.
 
 ---

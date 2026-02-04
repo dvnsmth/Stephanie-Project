@@ -32,6 +32,7 @@ This playbook replaces human filming/acting with AI generation.
    - preserve pauses that are the joke
 5. Create subtitles (optional but consistent).
 6. Export final MP4 + store prompt bundle for reproducibility.
+7. Write `render_report.md` with source inputs and bundle path.
 
 ## Quality Gates (must pass before Stephanie review)
 ### Technical

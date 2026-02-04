@@ -56,10 +56,15 @@ stephanie-project/
 │  │  │  ├─ trend_brief.md
 │  │  │  ├─ ideas.md
 │  │  │  ├─ approved_ideas.md
-│  │  │  ├─ scene_brief.md   ← NEW
+│  │  │  ├─ scene_brief.md
 │  │  │  ├─ scripts.md
 │  │  │  ├─ scene_plan.md
+│  │  │  ├─ render_report.md
+│  │  │  ├─ render_prompts/
 │  │  │  ├─ qc_report.md
+│  │  │  ├─ curator_decision.md
+│  │  │  ├─ READY_FOR_CURATOR.md
+│  │  │  ├─ STOPPED_QC_FAIL.md (only on QC failure)
 │  │  │  ├─ run_manifest.yaml
 │  │  │  └─ post_bundle/
 

@@ -6,6 +6,9 @@
 ## Title
 {Working title}
 
+## Source Idea
+{Exact approved idea title}
+
 ## Scene Intent
 (1–2 sentences describing what the scene is *about*, not the joke)
 
@@ -14,6 +17,9 @@
   - Role in scene:
   - Emotional state entering scene:
   - Integrity notes (what they must NOT do):
+
+## Selection Notes
+(Why this idea was chosen to brief now; 1–2 lines)
 
 ## Tension Pattern
 (e.g., visual mystery → verbal release)

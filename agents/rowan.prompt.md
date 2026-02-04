@@ -60,6 +60,9 @@ Return markdown with this exact structure:
 ## Title
 …
 
+## Source Idea
+(Exact approved idea title)
+
 ## Scene Intent
 (What this scene is about, not the joke)
 
@@ -68,6 +71,9 @@ Return markdown with this exact structure:
   - Role in scene:
   - Emotional state entering:
   - Integrity bounds:
+
+## Selection Notes
+(Why this idea was chosen to brief now; 1–2 lines)
 
 ## Tension Pattern
 (e.g., visual mystery → verbal release)
@@ -96,6 +102,10 @@ What the audience expects vs what actually happens.
 Return markdown with this exact structure per idea:
 
 ## {Title}
+
+### Source References
+- **Scene brief title:** …
+- **Script title:** …
 
 ### Mode
 - `sketch` (default) or `vignette-capable` (only if it still stands alone)

@@ -39,10 +39,12 @@ This will create:
 - scene_brief.md
 - scripts.md
 - scene_plan.md
+- render_report.md
 - render_prompts/*
 - qc_report.md
 - run_manifest.yaml
 - READY_FOR_CURATOR.md
+- curator_decision.md (template copy)
 
 Then:
 1) Copy `templates/curator_decision.template.md` into the run folder as `curator_decision.md`

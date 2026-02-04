@@ -36,6 +36,10 @@ Return markdown with this exact structure per idea:
 
 ## {Title}
 
+### Source Brief
+- **Scene brief title:** ...
+- **Dialogue budget honored:** (yes/no)
+
 ### Dialogue (spoken) — if any
 - Speaker: Line
 - Speaker: Line

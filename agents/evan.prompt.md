@@ -39,6 +39,11 @@ Return markdown:
 - **VO:** yes/no
 - **Subtitles:** yes/no
 
+## Source Inputs
+- **scene_plan.md:** (title + version if applicable)
+- **scripts.md:** (title + version if applicable)
+- **prompt bundle path:** render_prompts/{version}/
+
 ## Prompt Bundle Summary
 - Shot count:
 - Key continuity locks:

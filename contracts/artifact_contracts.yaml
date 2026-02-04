@@ -20,31 +20,37 @@ artifacts:
     description: Mabel shortlist + rejections
     required_headings:
       - "## Approved Shortlist"
+      - "## Selection Notes"
       - "## Rejected"
 
   scene_brief:
     description: Rowan scene brief (coordination artifact)
     required_headings:
       - "## Title"
+      - "## Source Idea"
       - "## Characters Present"
+      - "## Selection Notes"
       - "## Dialogue Budget"
 
   scripts:
     description: Lena micro-scripts
+    required_headings:
+      - "### Source Brief"
     required_any:
       - "### Script A (spoken)"
       - "### Dialogue"
 
   scene_plan:
     description: Rowan scene plan
-    required_any:
+    required_headings:
+      - "### Source References"
       - "### Beat Sheet"
-      - "### scene_plan.md"
 
   render_report:
     description: Evan render report
     required_headings:
       - "## Render Output"
+      - "## Source Inputs"
       - "## Prompt Bundle Summary"
       - "## QC Self-Check"
 
@@ -62,6 +68,7 @@ artifacts:
       - "## Curator Decision"
     required_markers:
       - "Approved:"
+      - "Selected version:"
 
   run_manifest:
     description: Run provenance manifest (inputs/outputs/hashes)
@@ -69,11 +76,22 @@ artifacts:
       - "schema_version"
       - "run.id"
       - "run.created_at"
+      - "run.state"
+      - "run.state_history"
       - "inputs.config.path"
       - "inputs.config.sha256"
       - "inputs.contracts.path"
       - "inputs.contracts.sha256"
       - "inputs.prompts"
+      - "inputs.policy"
+      - "inputs.policy.stephanie_taste_profile.path"
+      - "inputs.policy.stephanie_taste_profile.sha256"
+      - "inputs.policy.trend_usage_rules.path"
+      - "inputs.policy.trend_usage_rules.sha256"
+      - "inputs.policy.character_bible.path"
+      - "inputs.policy.character_bible.sha256"
+      - "inputs.policy.scope_boundaries.path"
+      - "inputs.policy.scope_boundaries.sha256"
       - "inputs.provider.name"
       - "inputs.provider.model"
       - "inputs.routing"
